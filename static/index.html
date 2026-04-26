@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>IndexAI – Multimedia Search Engine</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ─────────────────────────────────────────────────────── */
+  #sidebar {
+    width: 300px;
+    min-width: 300px;
+    background: #161b22;
+    border-right: 1px solid #30363d;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .sidebar-inner { padding: 24px 16px; display: flex; flex-direction: column; gap: 20px; }
+
+  #sidebar .logo { font-size: 20px; font-weight: 700; }
+  #sidebar .logo span { color: #1f6feb; }
+
+  #sidebar h2 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #8b949e;
+    margin-bottom: 10px;
+  }
+
+  .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    padding: 7px 0;
+    border-bottom: 1px solid #21262d;
+    color: #c9d1d9;
+  }
+
+  .stat-count {
+    margin-left: auto;
+    background: #21262d;
+    border-radius: 12px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #8b949e;
+  }
+
+  .box {
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 12px;
+    background: #0d1117;
+  }
+
+  .upload-zone {
+    border: 1.5px dashed #30363d;
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+    position: relative;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+
+  .upload-zone:hover { border-color: #1f6feb; background: #0d1f35; }
+
+  .upload-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .upload-zone .icon { font-size: 22px; margin-bottom: 4px; }
+  .upload-zone p { font-size: 13px; color: #8b949e; }
+
+  .upload-status {
+    font-size: 12px;
+    margin-top: 8px;
+    min-height: 18px;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+
+  .muted { color: #8b949e; font-size: 12px; line-height: 1.5; margin-top: 8px; }
+
+  /* frame-interval row for video */
+  .frame-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #8b949e;
+  }
+  .frame-row input[type="range"] { flex: 1; accent-color: #1f6feb; }
+
+  /* ── Main ────────────────────────────────────────────────────────── */
+  #main { flex: 1; padding: 32px 36px; overflow-y: auto; }
+
+  #header { margin-bottom: 28px; }
+  #header h1 { font-size: 24px; margin-bottom: 6px; }
+  #header p { color: #8b949e; font-size: 14px; }
+
+  /* ── Search section ──────────────────────────────────────────────── */
+  #search-section {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+
+  .method-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+
+  .tab {
+    padding: 6px 18px;
+    border-radius: 20px;
+    border: 1px solid #30363d;
+    background: transparent;
+    color: #8b949e;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background .15s;
+  }
+
+  .tab.active { background: #1f6feb; border-color: #1f6feb; color: #fff; font-weight: 600; }
+
+  .search-row { display: flex; gap: 10px; }
+
+  #search-input {
+    flex: 1;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 10px 16px;
+    color: #e6edf3;
+    font-size: 15px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  #search-input:focus { border-color: #1f6feb; }
+
+  #search-btn {
+    background: #1f6feb;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 28px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  #search-btn:hover { background: #388bfd; }
+
+  .options-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 12px;
+    font-size: 13px;
+    color: #8b949e;
+    flex-wrap: wrap;
+  }
+
+  #top-k-slider { width: 110px; accent-color: #1f6feb; }
+
+  .filter-toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+  .filter-toggle input { accent-color: #1f6feb; }
+
+  /* ── States ──────────────────────────────────────────────────────── */
+  #loading, #empty, #welcome {
+    text-align: center;
+    padding: 50px 20px;
+    color: #8b949e;
+    font-size: 15px;
+  }
+  #loading { display: none; }
+  #empty   { display: none; }
+
+  #results-bar {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: #8b949e;
+  }
+
+  #results-count {
+    background: #1f3a5f;
+    color: #79b8ff;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  #results-grid { display: flex; flex-direction: column; gap: 12px; }
+
+  /* ── Result card ─────────────────────────────────────────────────── */
+  .result-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    gap: 16px;
+    transition: border-color .15s;
+  }
+  .result-card:hover { border-color: #388bfd44; }
+
+  .result-cover-placeholder {
+    width: 64px;
+    min-width: 64px;
+    height: 90px;
+    border-radius: 6px;
+    background: #21262d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+  }
+
+  .result-body { flex: 1; min-width: 0; }
+
+  .result-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 5px;
+  }
+
+  .result-title { font-size: 15px; font-weight: 600; color: #e6edf3; }
+
+  .result-actions { display: flex; align-items: center; gap: 8px; }
+
+  .score-bar-wrap { width: 70px; height: 5px; background: #21262d; border-radius: 3px; overflow: hidden; }
+  .score-bar { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #1f6feb, #58a6ff); }
+  .score-text { font-size: 11px; color: #8b949e; min-width: 34px; text-align: right; }
+
+  .delete-btn {
+    background: transparent;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #8b949e;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 3px 7px;
+    transition: border-color .15s, color .15s;
+  }
+  .delete-btn:hover { border-color: #f85149; color: #f85149; }
+
+  .result-meta { font-size: 12px; color: #8b949e; margin-bottom: 5px; display: flex; flex-wrap: wrap; gap: 10px; }
+
+  .result-snippet {
+    font-size: 12px;
+    color: #c9d1d9;
+    line-height: 1.6;
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    background: #0d1117;
+    border-left: 2px solid #30363d;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .result-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .open-btn {
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #58a6ff;
+    border: 1px solid #388bfd55;
+    border-radius: 6px;
+    text-decoration: none;
+    background: #388bfd11;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .open-btn:hover { background: #388bfd22; border-color: #58a6ff; }
+
+  .tag { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+  .tag-book  { background: #132a14; color: #56d364; }
+  .tag-audio { background: #2a1a2e; color: #d2a8ff; }
+  .tag-image { background: #1a2a2e; color: #56d4c8; }
+  .tag-video { background: #2a1a1a; color: #f78166; }
+  .tag-doc   { background: #21262d; color: #c9d1d9; }
+  .tag-classic { background: #0d2d5e; color: #79b8ff; }
+  .tag-ai    { background: #2d1b50; color: #c9a7f7; }
+  .tag-ext   { background: #21262d; color: #c9d1d9; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ SIDEBAR ═══════════════════════════ -->
+<aside id="sidebar">
+  <div class="sidebar-inner">
+
+    <div class="logo">Index<span>AI</span></div>
+
+    <!-- Stats -->
+    <div>
+      <h2>📊 Data</h2>
+      <div class="stat-item"><span>📚 Books</span>  <span class="stat-count" id="cnt-book">—</span></div>
+      <div class="stat-item"><span>📄 Docs</span>   <span class="stat-count" id="cnt-doc">—</span></div>
+      <div class="stat-item"><span>🎧 Audio</span>  <span class="stat-count" id="cnt-audio">—</span></div>
+      <div class="stat-item"><span>🖼️ Images</span> <span class="stat-count" id="cnt-image">—</span></div>
+      <div class="stat-item"><span>🎬 Videos</span> <span class="stat-count" id="cnt-video">—</span></div>
+    </div>
+
+    <!-- Upload: Book -->
+    <div class="box">
+      <h2>Upload Book</h2>
+      <div class="upload-zone">
+        <input type="file" id="book-file-input" accept=".txt,.pdf" />
+        <div class="icon">📚</div>
+        <p>Drop a book (.txt or .pdf)</p>
+      </div>
+      <div class="upload-status" id="book-upload-status"></div>
+      <div class="muted">Title is detected from the filename automatically.</div>
+    </div>
+
+    <!-- Upload: Doc -->
+    <div class="box">
+      <h2>Upload Document</h2>
+      <div class="upload-zone">
+        <input type="file" id="doc-file-input" accept=".txt,.pdf" />
+        <div class="icon">📄</div>
+        <p>Drop a document (.txt or .pdf)</p>
+      </div>
+      <div class="upload-status" id="doc-upload-status"></div>
+      <div class="muted">Notes, reports, course files, etc.</div>
+    </div>
+
+    <!-- Upload: Audio -->
+    <div class="box">
+      <h2>Upload Audio</h2>
+      <div class="upload-zone">
+        <input type="file" id="audio-file-input" accept=".mp3,.wav,.m4a,.ogg,.flac" />
+        <div class="icon">🎧</div>
+        <p>Drop an audio file</p>
+      </div>
+      <div class="upload-status" id="audio-upload-status"></div>
+      <div class="muted">Whisper transcribes the audio then indexes it.</div>
+    </div>
+
+    <!-- Upload: Image -->
+    <div class="box">
+      <h2>Upload Image</h2>
+      <div class="upload-zone">
+        <input type="file" id="image-file-input" accept=".jpg,.jpeg,.png,.bmp,.webp,.gif,.tiff" />
+        <div class="icon">🖼️</div>
+        <p>Drop an image file</p>
+      </div>
+      <div class="upload-status" id="image-upload-status"></div>
+      <div class="muted">OCR extracts visible text + CLIP indexes visual meaning via Whoosh + FAISS.</div>
+    </div>
+
+    <!-- Upload: Video -->
+    <div class="box">
+      <h2>Upload Video</h2>
+      <div class="upload-zone">
+        <input type="file" id="video-file-input" accept=".mp4,.avi,.mkv,.mov,.webm,.flv" />
+        <div class="icon">🎬</div>
+        <p>Drop a video file</p>
+      </div>
+      <div class="frame-row">
+        <span>Sample frame every</span>
+        <input type="range" id="frame-interval" min="1" max="60" value="5" />
+        <span id="frame-interval-val">5</span><span>s</span>
+      </div>
+      <div class="upload-status" id="video-upload-status"></div>
+      <div class="muted">Audio → Whisper transcript + sampled frames → OCR + CLIP visual embeddings.</div>
+    </div>
+
+  </div>
+</aside>
+
+<!-- ═══════════════════════════ MAIN ═══════════════════════════════ -->
+<main id="main">
+  <div id="header">
+    <h1>Multimedia Search Engine</h1>
+    <p>Upload books, documents, audio, images, or videos — then search by concept, theme, or phrase.</p>
+  </div>
+
+  <div id="search-section">
+    <div class="method-tabs">
+      <button class="tab active" data-method="both">Classic + AI</button>
+      <button class="tab" data-method="classic">Classic</button>
+      <button class="tab" data-method="ai">AI</button>
+    </div>
+
+    <div class="search-row">
+      <input id="search-input" type="text" placeholder='Try: "discipline", "neural networks", "sunset beach"…' />
+      <button id="search-btn">Search</button>
+    </div>
+
+    <div class="options-row">
+      <span>Results:</span>
+      <input type="range" id="top-k-slider" min="3" max="20" value="10" />
+      <span id="top-k-val">10</span>
+
+      <label class="filter-toggle"><input type="checkbox" id="filter-books"  checked /> 📚 Books</label>
+      <label class="filter-toggle"><input type="checkbox" id="filter-docs"   checked /> 📄 Docs</label>
+      <label class="filter-toggle"><input type="checkbox" id="filter-audio"  checked /> 🎧 Audio</label>
+      <label class="filter-toggle"><input type="checkbox" id="filter-images" checked /> 🖼️ Images</label>
+      <label class="filter-toggle"><input type="checkbox" id="filter-videos" checked /> 🎬 Videos</label>
+    </div>
+  </div>
+
+  <div id="loading">🔍 Searching…</div>
+  <div id="empty">No results found for that query.</div>
+  <div id="welcome">Upload a file, then test concept search.</div>
+
+  <div id="results-bar">
+    <span id="results-count"></span>
+    <span id="elapsed"></span>
+  </div>
+
+  <div id="results-grid"></div>
+</main>
+
+<!-- ═══════════════════════════ SCRIPT ════════════════════════════ -->
+<script>
+  /* ── Method tabs ─────────────────────────────────────────────── */
+  let activeMethod = "both";
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      activeMethod = tab.dataset.method;
+    });
+  });
+
+  /* ── Sliders ────────────────────────────────────────────────── */
+  const slider = document.getElementById("top-k-slider");
+  slider.addEventListener("input", () => {
+    document.getElementById("top-k-val").textContent = slider.value;
+  });
+
+  const frameSlider = document.getElementById("frame-interval");
+  frameSlider.addEventListener("input", () => {
+    document.getElementById("frame-interval-val").textContent = frameSlider.value;
+  });
+
+  /* ── Search ─────────────────────────────────────────────────── */
+  document.getElementById("search-btn").addEventListener("click", doSearch);
+  document.getElementById("search-input").addEventListener("keydown", e => {
+    if (e.key === "Enter") doSearch();
+  });
+
+  ["filter-books","filter-docs","filter-audio","filter-images","filter-videos"].forEach(id => {
+    document.getElementById(id)?.addEventListener("change", () => {
+      if (document.getElementById("search-input").value.trim()) doSearch();
+    });
+  });
+
+  function setState(state) {
+    document.getElementById("loading").style.display   = state === "loading" ? "block" : "none";
+    document.getElementById("empty").style.display     = state === "empty"   ? "block" : "none";
+    document.getElementById("welcome").style.display   = state === "welcome" ? "block" : "none";
+    document.getElementById("results-bar").style.display = "none";
+    document.getElementById("results-grid").innerHTML  = "";
+  }
+
+  async function doSearch() {
+    const q = document.getElementById("search-input").value.trim();
+    if (!q) return;
+    setState("loading");
+    try {
+      const res  = await fetch(`/search?q=${encodeURIComponent(q)}&method=${activeMethod}&top_k=${slider.value}`);
+      const data = await res.json();
+      renderResults(data);
+    } catch (err) {
+      console.error(err);
+      setState("empty");
+    }
+  }
+
+  /* ── Render results ─────────────────────────────────────────── */
+  function renderResults(data) {
+    const showBooks  = document.getElementById("filter-books")?.checked  ?? true;
+    const showDocs   = document.getElementById("filter-docs")?.checked   ?? true;
+    const showAudio  = document.getElementById("filter-audio")?.checked  ?? true;
+    const showImages = document.getElementById("filter-images")?.checked ?? true;
+    const showVideos = document.getElementById("filter-videos")?.checked ?? true;
+
+    let results = (data.results || []).filter(r => {
+      const t = r.type;
+      if ((t === "book" || t === "book_meta") && !showBooks)  return false;
+      if (t === "doc"   && !showDocs)   return false;
+      if (t === "audio" && !showAudio)  return false;
+      if (t === "image" && !showImages) return false;
+      if (t === "video" && !showVideos) return false;
+      return true;
+    });
+
+    if (!results.length) { setState("empty"); return; }
+
+    const grid     = document.getElementById("results-grid");
+    const bar      = document.getElementById("results-bar");
+    document.getElementById("loading").style.display  = "none";
+    document.getElementById("empty").style.display    = "none";
+    document.getElementById("welcome").style.display  = "none";
+    bar.style.display = "flex";
+    document.getElementById("results-count").textContent = `${results.length} result(s)`;
+    document.getElementById("elapsed").textContent       = `Time: ${data.elapsed}s`;
+
+    results.forEach(r => {
+      const t = r.type;
+      const isBook  = t === "book" || t === "book_meta";
+      const isDoc   = t === "doc";
+      const isAudio = t === "audio";
+      const isImage = t === "image";
+      const isVideo = t === "video";
+
+      const icon = isBook ? "📚" : isDoc ? "📄" : isAudio ? "🎧" : isImage ? "🖼️" : "🎬";
+
+      // Use absolute cosine similarity (already in [0,1] range from FAISS).
+      // Classic (Whoosh) scores are unbounded, so cap at 1.0 for display only.
+      const rawScore = r.score || 0;
+      const scorePct = Math.max(0, Math.min(100, rawScore * 100)).toFixed(1);
+
+      const methodBadge = r.method === "classic"
+        ? `<span class="tag tag-classic">Classic</span>`
+        : r.method === "ai"
+          ? `<span class="tag tag-ai">AI</span>`
+          : `<span class="tag tag-classic">Classic</span><span class="tag tag-ai">AI</span>`;
+
+      const typeBadge = isBook  ? `<span class="tag tag-book">Book</span>`
+                      : isDoc   ? `<span class="tag tag-doc">Doc</span>`
+                      : isAudio ? `<span class="tag tag-audio">Audio</span>`
+                      : isImage ? `<span class="tag tag-image">Image</span>`
+                      :           `<span class="tag tag-video">Video</span>`;
+
+      const extBadge = r.source_ext ? `<span class="tag tag-ext">${escapeHtml(r.source_ext)}</span>` : "";
+
+      const matchInfo = r.match_count > 1
+        ? `${r.match_count} matching chunks`
+        : `Chunk ${r.chunk_index}`;
+      const meta = [
+        r.authors ? `✍️ ${r.authors}` : "",
+        matchInfo,
+        isImage ? "🖼️ Visual index" : "",
+        isVideo ? "🎬 Audio + Frames" : "",
+      ].filter(Boolean).join(" · ");
+
+      grid.innerHTML += `
+        <div class="result-card" id="card-${r.doc_id}">
+          <div class="result-cover-placeholder">${icon}</div>
+          <div class="result-body">
+            <div class="result-top">
+              <div class="result-title">${escapeHtml(r.title || "Untitled")}</div>
+              <div class="result-actions">
+                <div style="display:flex;align-items:center;gap:5px">
+                  <div class="score-bar-wrap"><div class="score-bar" style="width:${scorePct}%"></div></div>
+                  <span class="score-text">${scorePct}%</span>
+                </div>
+                <button class="delete-btn" onclick="deleteDoc('${r.doc_id}')">🗑</button>
+              </div>
+            </div>
+            <div class="result-meta">${escapeHtml(meta)}</div>
+            ${r.snippet ? `<div class="result-snippet">${escapeHtml(r.snippet)}</div>` : ""}
+            <div class="result-tags">${typeBadge}${methodBadge}${extBadge}</div>
+            <div style="margin-top:8px">
+              <a class="open-btn" href="/file/${r.parent_id || r.doc_id}" target="_blank">
+                ${isAudio ? "▶ Play" : isVideo ? "▶ Play" : isImage ? "🔍 View" : "📂 Open"}
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  function escapeHtml(v) {
+    return String(v || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  /* ── Delete ─────────────────────────────────────────────────── */
+  async function deleteDoc(docId) {
+    if (!confirm("Delete this indexed document?")) return;
+    try {
+      const res  = await fetch(`/delete/${docId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) { document.getElementById(`card-${docId}`)?.remove(); loadStats(); }
+      else alert(data.reason || "Delete failed");
+    } catch { alert("Network error"); }
+  }
+
+  /* ── Generic uploader ───────────────────────────────────────── */
+  function makeUploader(inputId, statusId, endpoint, processingMsg, extraParams) {
+    const input  = document.getElementById(inputId);
+    const status = document.getElementById(statusId);
+
+    input.addEventListener("change", function () {
+      if (!this.files[0]) return;
+      upload(this.files[0]);
+    });
+
+    async function upload(file) {
+      status.style.color = "#8b949e";
+      status.textContent = processingMsg;
+
+      const form = new FormData();
+      form.append("file", file);
+
+      let url = endpoint;
+      if (extraParams) {
+        const params = new URLSearchParams(extraParams());
+        url += "?" + params.toString();
+      }
+
+      try {
+        const res  = await fetch(url, { method: "POST", body: form });
+        const data = await res.json();
+
+        if (data.status === "ok" || data.chunks !== undefined) {
+          status.style.color = "#56d364";
+          const chunks = data.chunks || data.audio_chunks || data.frame_chunks || "?";
+          status.textContent = `✓ Indexed: "${data.title}" (${chunks} chunks, ${data.elapsed}s)`;
+        } else {
+          status.style.color = "#f85149";
+          status.textContent = data.detail || data.reason || "Error indexing file";
+        }
+        loadStats();
+      } catch {
+        status.style.color = "#f85149";
+        status.textContent = "Network error — is the server running?";
+      }
+    }
+  }
+
+  makeUploader("book-file-input",  "book-upload-status",  "/upload-book",  "Uploading and indexing book…");
+  makeUploader("doc-file-input",   "doc-upload-status",   "/upload-doc",   "Uploading and indexing document…");
+  makeUploader("audio-file-input", "audio-upload-status", "/upload-audio", "Uploading and transcribing audio…");
+  makeUploader("image-file-input", "image-upload-status", "/upload-image", "Uploading and indexing image…");
+  makeUploader("video-file-input", "video-upload-status", "/upload-video", "Uploading and indexing video…",
+    () => ({ frame_every_sec: document.getElementById("frame-interval").value })
+  );
+
+  /* ── Stats ──────────────────────────────────────────────────── */
+  async function loadStats() {
+    try {
+      const res  = await fetch("/stats");
+      const data = await res.json();
+      const docs = data.by_type_documents || {};
+      document.getElementById("cnt-book").textContent  = docs.book  || 0;
+      document.getElementById("cnt-doc").textContent   = docs.doc   || 0;
+      document.getElementById("cnt-audio").textContent = docs.audio || 0;
+      document.getElementById("cnt-image").textContent = docs.image || 0;
+      document.getElementById("cnt-video").textContent = docs.video || 0;
+    } catch {}
+  }
+
+  loadStats();
+  setInterval(loadStats, 6000);
+</script>
+</body>
+</html>
