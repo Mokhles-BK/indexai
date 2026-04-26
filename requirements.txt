@@ -1,0 +1,35 @@
+# Core
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+
+# Classic search
+Whoosh==2.7.4
+
+# AI / embeddings (text)
+sentence-transformers==2.7.0
+faiss-cpu==1.8.0
+
+# Book / document parsing
+pypdf==4.2.0
+
+# Audio transcription (requires ffmpeg installed separately)
+openai-whisper==20231117
+
+# ── Image & Video (CLIP + OCR replaces ResNet50) ────────────────────────────
+# CLIP: maps images and text into the same embedding space.
+# "certificate" searches will match images that LOOK like certificates.
+transformers>=4.35.0
+torch>=2.0.0
+Pillow>=10.0.0
+
+# OCR: extract actual text visible in images / video frames.
+# Requires tesseract-ocr installed on the system:
+#   Ubuntu/Debian: sudo apt-get install tesseract-ocr
+#   macOS:         brew install tesseract
+pytesseract>=0.3.10
+
+# Video frame extraction (requires ffmpeg installed separately)
+opencv-python>=4.8.0
+
+# NOTE: torchvision is no longer required (ResNet50 removed).
